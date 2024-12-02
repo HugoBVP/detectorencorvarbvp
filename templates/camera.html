@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cámara en vivo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        h1 {
+            color: #4CAF50;
+        }
+
+        video {
+            width: 100%;
+            max-width: 600px;
+            margin: 20px auto;
+            display: block;
+        }
+
+        .message {
+            font-size: 1.2em;
+            color: red;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Cámara en vivo</h1>
+    <p>Coloca la mano frente a la cámara para iniciar la calibración.</p>
+
+    <!-- La cámara se mostrará aquí -->
+    <img src="{{ url_for('video_feed') }}" alt="Video en vivo" />
+
+    <p class="message">Asegúrate de que tu mano esté en la posición natural para calibrar.</p>
+
+</body>
+</html>

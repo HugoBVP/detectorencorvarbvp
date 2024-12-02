@@ -1,17 +1,16 @@
+from flask import Flask, render_template, Response
 import cv2
 import mediapipe as mp
 import numpy as np
 import time
-from flask import Flask, render_template, Response
 
-# Inicializar Flask
 app = Flask(__name__)
 
 # Inicializar MediaPipe Hands
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(static_image_mode=False, max_num_hands=1, min_detection_confidence=0.5, min_tracking_confidence=0.5)
 
-# Variables para la calibración
+# Calibración inicial
 calibrated_angles = {}
 calibration_complete = False
 calibration_time = 0  # Para controlar el tiempo de visualización del mensaje de calibración
@@ -88,63 +87,65 @@ def analyze_and_draw(image, hand_landmarks):
             # Dibujar el texto dentro de la caja
             cv2.putText(image, message, (top_left[0] + padding, top_left[1] + padding + h_text), font, font_scale, text_color, thickness)
 
-# Ruta para el inicio de la página
-@app.route('/')
-def index():
-    return render_template('index.html')
+# Captura de cámara
+cap = cv2.VideoCapture(0)
 
-# Función para el video en vivo
+@app.route('/')
+def home():
+    return render_template('index.html')  # Página de inicio
+
+@app.route('/start-camera')
+def start_camera():
+    global calibration_complete, calibration_time
+    calibration_complete = False  # Reiniciar la calibración cuando se inicia la cámara
+    calibration_time = 0
+    return render_template('camera.html')  # O la página donde se muestra la cámara
+
+# Generar un flujo de video en tiempo real
+def gen():
+    global cap, hands, calibration_complete, calibration_time
+    while True:
+        success, frame = cap.read()
+        if not success:
+            break
+
+        # Invertir la imagen para una vista lateral
+        frame = cv2.flip(frame, 1)
+
+        # Convertir a RGB para MediaPipe
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+        # Procesar la imagen con MediaPipe Hands
+        result = hands.process(rgb_frame)
+
+        if result.multi_hand_landmarks:
+            for hand_landmarks in result.multi_hand_landmarks:
+                if not calibration_complete:
+                    cv2.putText(frame, "Coloca la mano en posición natural y toca la pantalla o presiona 'c' para calibrar", (10, 50),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2)
+                else:
+                    cv2.putText(frame, "Calibracion exitosa. Analizando...", (10, 50),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+                    analyze_and_draw(frame, hand_landmarks.landmark)
+
+                    # Mostrar mensaje de calibración exitosa durante 2 segundos
+                    if calibration_complete and (time.time() - calibration_time < 2):
+                        height, width, _ = frame.shape
+                        cv2.putText(frame, "Calibracion exitosa", (width // 4, height // 2),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 3, cv2.LINE_AA)
+
+        # Codificar la imagen en JPEG
+        ret, jpeg = cv2.imencode('.jpg', frame)
+        if not ret:
+            break
+        # Convertir la imagen a bytes y devolverla como una respuesta HTTP
+        frame_bytes = jpeg.tobytes()
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n\r\n')
+
 @app.route('/video_feed')
 def video_feed():
-    def gen():
-        cap = cv2.VideoCapture(0)
-        while True:
-            success, frame = cap.read()
-            if not success:
-                break
-
-            # Invertir la imagen para una vista lateral
-            frame = cv2.flip(frame, 1)
-
-            # Convertir a RGB para MediaPipe
-            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
-            # Procesar la imagen con MediaPipe Hands
-            result = hands.process(rgb_frame)
-
-            if result.multi_hand_landmarks:
-                for hand_landmarks in result.multi_hand_landmarks:
-                    if not calibration_complete:
-                        cv2.putText(frame, "Coloca la mano en posición natural y toca la pantalla o presiona 'c' para calibrar", (10, 50),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2)
-                    else:
-                        cv2.putText(frame, "Calibracion exitosa. Analizando...", (10, 50),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-                        analyze_and_draw(frame, hand_landmarks.landmark)
-
-                        # Mostrar mensaje de calibración exitosa durante 2 segundos
-                        if calibration_complete and (time.time() - calibration_time < 2):
-                            height, width, _ = frame.shape
-                            cv2.putText(frame, "Calibracion exitosa", (width // 4, height // 2),
-                                        cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0, 255, 0), 3, cv2.LINE_AA)
-
-            # Codificar la imagen para enviarla a la web
-            ret, jpeg = cv2.imencode('.jpg', frame)
-            if not ret:
-                continue
-            frame = jpeg.tobytes()
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
-
     return Response(gen(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
-# Ruta para la calibración (clic o tecla 'c')
-@app.route('/calibrate', methods=['POST'])
-def calibrate_post():
-    global calibration_complete, calibration_time
-    calibration_complete = False
-    calibration_time = time.time()
-    return '', 204
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+if __name__ == "__main__":
+    app.run(debug=True, host='0.0.0.0', port=5000)
