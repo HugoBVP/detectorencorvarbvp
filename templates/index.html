@@ -1,75 +1,21 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Iniciar Cámara</title>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-    <script>
-        window.onload = function() {
-            const videoElement = document.getElementById('video');
-            const startButton = document.getElementById('start-camera');
-
-            // Función para acceder a la cámara
-            async function startCamera() {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                    videoElement.srcObject = stream;
-                    videoElement.play();
-                    detectHand();
-                } catch (error) {
-                    console.error('Error al acceder a la cámara: ', error);
-                    alert('No se pudo acceder a la cámara. Asegúrate de que el navegador tiene permisos para usarla.');
-                }
-            }
-
-            // Iniciar la cámara cuando se hace clic en el botón
-            startButton.addEventListener('click', startCamera);
-
-            // Inicializar MediaPipe Hands
-            const hands = new HandLandmarker({
-                locateFile: (file) => {
-                    return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
-                }
-            });
-
-            // Detectar la mano
-            async function detectHand() {
-                const video = document.getElementById('video');
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                document.body.appendChild(canvas);
-
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-
-                function processFrame() {
-                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    const predictions = await hands.send({ image: canvas });
-
-                    if (predictions.landmarks) {
-                        // Aquí puedes agregar tu lógica para el análisis de los dedos
-                        // Ejemplo básico: solo dibujar los puntos de la mano
-                        predictions.landmarks.forEach(landmark => {
-                            ctx.beginPath();
-                            ctx.arc(landmark.x * canvas.width, landmark.y * canvas.height, 5, 0, 2 * Math.PI);
-                            ctx.fillStyle = 'red';
-                            ctx.fill();
-                        });
-                    }
-
-                    requestAnimationFrame(processFrame);
-                }
-
-                processFrame();
-            }
-        };
-    </script>
+    <title>Taubman Approach</title>
 </head>
 <body>
-    <h1>Haz clic para iniciar la cámara</h1>
-    <button id="start-camera">Iniciar cámara</button>
-    <video id="video" width="640" height="480" autoplay></video>
+    <h1>Taubman Approach - Detección de Encorvamiento DIP</h1>
+    <div>
+        <img src="/video" style="width: 80%;" alt="Video en vivo de la cámara" />
+    </div>
+    <button onclick="calibrate()">Calibrar</button>
+
+    <script>
+        function calibrate() {
+            fetch('/calibrate', { method: 'POST' })
+                .then(response => alert("Calibración activada"))
+                .catch(error => alert("Error al calibrar: " + error));
+        }
+    </script>
 </body>
 </html>
