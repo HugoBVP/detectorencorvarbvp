@@ -4,27 +4,66 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Iniciar Cámara</title>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <script>
         window.onload = function() {
-            const videoElement = document.getElementById('video'); // Elemento de video en el HTML
-            const startButton = document.getElementById('start-camera'); // Botón para iniciar la cámara
+            const videoElement = document.getElementById('video');
+            const startButton = document.getElementById('start-camera');
 
             // Función para acceder a la cámara
             async function startCamera() {
                 try {
-                    // Obtiene el stream de la cámara
                     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                    // Asigna el stream al elemento de video
                     videoElement.srcObject = stream;
-                    videoElement.play(); // Reproduce el video
+                    videoElement.play();
+                    detectHand();
                 } catch (error) {
                     console.error('Error al acceder a la cámara: ', error);
                     alert('No se pudo acceder a la cámara. Asegúrate de que el navegador tiene permisos para usarla.');
                 }
             }
 
-            // Inicia la cámara cuando se hace clic en el botón
+            // Iniciar la cámara cuando se hace clic en el botón
             startButton.addEventListener('click', startCamera);
+
+            // Inicializar MediaPipe Hands
+            const hands = new HandLandmarker({
+                locateFile: (file) => {
+                    return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+                }
+            });
+
+            // Detectar la mano
+            async function detectHand() {
+                const video = document.getElementById('video');
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                document.body.appendChild(canvas);
+
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+
+                function processFrame() {
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    const predictions = await hands.send({ image: canvas });
+
+                    if (predictions.landmarks) {
+                        // Aquí puedes agregar tu lógica para el análisis de los dedos
+                        // Ejemplo básico: solo dibujar los puntos de la mano
+                        predictions.landmarks.forEach(landmark => {
+                            ctx.beginPath();
+                            ctx.arc(landmark.x * canvas.width, landmark.y * canvas.height, 5, 0, 2 * Math.PI);
+                            ctx.fillStyle = 'red';
+                            ctx.fill();
+                        });
+                    }
+
+                    requestAnimationFrame(processFrame);
+                }
+
+                processFrame();
+            }
         };
     </script>
 </head>
