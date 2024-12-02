@@ -1,31 +1,37 @@
 <!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Detección de Encorvamiento</title>
-    </head>
-    <body>
-        <h1>Iniciar cámara</h1>
-        <button id="startCamera">Iniciar cámara</button>
-        <br><br>
-        <video id="video" width="640" height="480" autoplay></video>
-        <script>
-            const startCameraButton = document.getElementById('startCamera');
-            const videoElement = document.getElementById('video');
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Cámara</title>
+    <script>
+        // Espera a que el documento esté completamente cargado
+        window.onload = function() {
+            const videoElement = document.getElementById('video'); // Elemento de video en el HTML
+            const startButton = document.getElementById('start-camera'); // Botón para iniciar la cámara
 
-            startCameraButton.addEventListener('click', function() {
-                // Solicitar acceso a la cámara
-                navigator.mediaDevices.getUserMedia({ video: true })
-                    .then(function(stream) {
-                        // Asignar el stream de video al elemento <video>
-                        videoElement.srcObject = stream;
-                        videoElement.style.display = 'block';
-                    })
-                    .catch(function(error) {
-                        alert("No se pudo acceder a la cámara: " + error.message);
-                    });
-            });
-        </script>
-    </body>
+            // Función para acceder a la cámara
+            async function startCamera() {
+                try {
+                    // Obtiene el stream de la cámara
+                    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                    // Asigna el stream al elemento de video
+                    videoElement.srcObject = stream;
+                    videoElement.play(); // Reproduce el video
+                } catch (error) {
+                    console.error('Error al acceder a la cámara: ', error);
+                    alert('No se pudo acceder a la cámara. Asegúrate de que el navegador tiene permisos para usarla.');
+                }
+            }
+
+            // Inicia la cámara cuando se hace clic en el botón
+            startButton.addEventListener('click', startCamera);
+        };
+    </script>
+</head>
+<body>
+    <h1>Haz clic para iniciar la cámara</h1>
+    <button id="start-camera">Iniciar cámara</button>
+    <video id="video" width="640" height="480" autoplay></video>
+</body>
 </html>
